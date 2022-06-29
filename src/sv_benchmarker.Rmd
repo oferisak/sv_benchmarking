@@ -1,0 +1,67 @@
+---
+title: "SV benchmarking"
+author: "Genomics Center at Clalit"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: united
+    toc: true
+    toc_float: false
+---
+
+```{r initial_setup}
+sv_analysis_folder<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/'
+
+```
+
+```{r render_report,eval=F,echo=F}
+library(rmarkdown)
+render('/media/SSD/Bioinformatics/Projects/sv_benchmarking/src/sv_benchmarker.Rmd', 
+       output_dir = sv_analysis_folder,
+       output_file = glue('{sv_analysis_folder}/sv_benchmarking_report.{Sys.Date()}.html'),
+       quiet = F)
+```
+
+```{r setup, include=FALSE,warning=F,message=F}
+
+project_dir<-sv_analysis_folder
+knitr::opts_knit$set(root.dir=project_dir)
+knitr::opts_chunk$set(echo = F)
+library(ProjectTemplate)
+setwd(project_dir)
+load.project()
+
+```
+
+
+```{r define_parameters}
+comp_tool<-'wittyer'
+output_folder_prefix<-'wittyer_vs_local_cnv'
+
+#test_vcf<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/new_germline/21-063_Clalit.sv.vcf.gz'
+test_vcf<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/new_germline/21-063_Clalit.cnv.vcf.gz'
+#test_vcf<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/dragen_examples/SV/HG002.sv.vcf.gz'
+reference_vcf<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/giab/HG002_SVs_Tier1_v0.6.vcf.gz'
+target_bed<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/giab/HG002_SVs_Tier1_noVDJorXorY_v0.6.2.bed'
+#wittyer_config_file<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/config_files/dragen_sv.wittyer.config'
+wittyer_config_file<-'/media/SSD/Bioinformatics/Projects/sv_benchmarking/data/dragen_examples/CNV/config.json'
+
+main_output_folder<-glue('./output/{output_folder_prefix}_results_{Sys.Date()}')
+if (!dir.exists(main_output_folder)){dir.create(main_output_folder)}
+```
+
+```{r run_comparison}
+if (comp_tool=='wittyer'){
+  wittyer_command<-get_wittyer_command(test_vcf = test_vcf,
+                      reference_vcf = reference_vcf,
+                      output_folder = main_output_folder,
+                      config_file = wittyer_config_file,
+                      target_bed = target_bed,
+                      em = 'CrossTypeAndSimpleCounting')
+                      #em = 'SimpleCounting')
+  wittyer_output<-run_wittyer(wittyer_command)
+  wittyer_output_parsed<-parse_wittyer_ouput(main_output_folder)
+  plot_wittyer_precision_recall(wittyer_output_parsed,output_folder = main_output_folder,base_or_event = 'event')
+  plot_wittyer_precision_recall(wittyer_output_parsed,output_folder = main_output_folder,base_or_event = 'base')
+}
+```
